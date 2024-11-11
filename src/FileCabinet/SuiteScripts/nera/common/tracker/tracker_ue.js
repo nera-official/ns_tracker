@@ -21,12 +21,7 @@
  * =========================================================================================================
  */
 
-define(["N/log", "N/search", "N/runtime", "N/record"], function(
-    log,
-    search,
-    runtime,
-    record
-    ) {
+define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log, query, runtime, record,  search) {
 
     /*********************************
      * CONSTANTS
@@ -62,7 +57,7 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
         try {
 
             // Qualify: Not Create Mode
-            if (context.type === "create") {
+            if (context.type === context.UserEventType.CREATE) {
                 return;
             }
     
@@ -144,18 +139,21 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
      */
     function queryTracker(recordType, recordId) {
         try {
-            // Check if recordId is empty, null, or undefined
-            if (!recordId) {
-                log.debug("Info", "RecordId is empty. Skipping tracker query...");
-                return [];
-            }
+            // // Check if recordId is empty, null, or undefined
+            // if (!recordId) {
+            //     log.debug("Info", "RecordId is empty. Skipping tracker query...");
+            //     return [];
+            // }
     
-            // Check if recordType is empty
-            if (!recordType) {
-                log.debug("Info", "RecordType is empty. Skipping tracker query...");
-                return [];
-            }
+            // // Check if recordType is empty
+            // if (!recordType) {
+            //     log.debug("Info", "RecordType is empty. Skipping tracker query...");
+            //     return [];
+            // }
     
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // CONVERT THIS TO SQL 
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             const searchResults = [];
             const trackerSearch = search.create({
                 type: CONSTANTS.RECORDS.TRANSACTION_TRACKER,
@@ -183,6 +181,9 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             return searchResults;
 
         } catch (error) {
+            // CAN THINK OF ANY POSSIBILITY THIS WILL OCCUR OUTSIDE YOUR CONTROL ? IF NOT REMOVE IT.
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
             // log.error({
             //     title: "Error in queryTracker",
             //     details: `Error occurred for recordType: ${recordType}, recordId: ${recordId}. ${error.message}`,
@@ -197,6 +198,12 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
      * @returns {string} Comma-separated list of role IDs
      */
     function getRoleInternalIds(contains) {
+
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // REWRITE USING SUITEQL TO CHEKC PERMISISON RIGHT TO CUSTOM RECORD, 
+        // NO HARD CODING ROLES HERE
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         try {
             const roleIds = [CONSTANTS.ROLES.SYSTEM_ADMIN]; // Include default admin role
             const roleSearch = search.create({
@@ -215,7 +222,12 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             });
     
             return roleIds.join(",");
+            
         } catch (error) {
+            
+            // CAN THINK OF ANY POSSIBILITY THIS WILL OCCUR OUTSIDE YOUR CONTROL ? IF NOT REMOVE IT.
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
             // log.error({
             //     title: "Error in getRoleInternalIds",
             //     details: error.message,
@@ -320,19 +332,24 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
         }
     };
   
-  
+
+    // comment TO SHOW THE PURPOSE OF THIS
     function getExecutionContext(){
         try {
             const currentUser = runtime.getCurrentUser();
             const { name, email, roleCenter } = currentUser;
     
             return {
-            "User Information": { name, email },
-            "Role Details": { roleCenter },
+                "User Information": { name, email },
+                "Role Details": { roleCenter },
             };
 
         } catch (error) {
-                log.error({
+
+            // CAN THINK OF ANY POSSIBILITY THIS WILL OCCUR OUTSIDE YOUR CONTROL ? IF NOT REMOVE IT.
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            log.error({
                 title: "Error in getExecutionContext",
                 details: `Failed to get execution context: ${error.message}`,
             });
