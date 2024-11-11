@@ -45,7 +45,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
         UI: {
             BUTTON_LABEL: "Update Tracker Status"
         },
-    };
+    }
   
     /*********************************
      * ENTRY POINT FUNCTIONS
@@ -102,7 +102,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
                 );
             }
         }
-    };
+    }
 
     
     /*********************************
@@ -159,7 +159,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             // null indicates error on SuiteQL
             return null; 
         }
-    };
+    }
 
   
     /*********************************
@@ -198,7 +198,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
     
             field.defaultValue = value;
         });
-    };
+    }
   
     /*********************************
      * RECORD MANAGEMENT FUNCTIONS
@@ -247,7 +247,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             // null indicates error
             return null;  
         }
-    };
+    }
   
     return { 
         beforeLoad, 
