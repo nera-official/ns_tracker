@@ -18,21 +18,12 @@
  * =========================================================================================================
  */
 
-define(["N/record", "N/search", "N/log", "N/ui/message"], function (
-    record,
-    search,
-    log,
-    message
-    ) {
+define(["N/record", "N/query", "N/log", "N/ui/message", "N/search"], function (record, query, log, message, search) {
 
     /*********************************
      * CONSTANTS
      *********************************/
     const TRANSACTION_TRACKER_RECORD = "customrecord_nera_transaction_tracker";
-
-    // function pageInit() {
-    //     console.log("Record is working....");
-    // }
   
     /*********************************
      * HELPERS
@@ -87,17 +78,17 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
                 return [];
             }
             const trackerObj = search.create({
-            type: "customrecord_nera_transaction_tracker",
-            filters: [
-                ["custrecord_tt_record_types", "is", recordType],
-                "AND",
-                ["custrecord_tt_internalid", "is", recordId],
-            ],
-            columns: [
-                search.createColumn({ name: "internalid", sort: search.Sort.ASC }),
-                search.createColumn({ name: "custrecord_tt_tracker_status" }),
-                search.createColumn({ name: "custrecord_tt_memo" }),
-            ],
+                type: "customrecord_nera_transaction_tracker",
+                filters: [
+                    ["custrecord_tt_record_types", "is", recordType],
+                    "AND",
+                    ["custrecord_tt_internalid", "is", recordId],
+                ],
+                columns: [
+                    search.createColumn({ name: "internalid", sort: search.Sort.ASC }),
+                    search.createColumn({ name: "custrecord_tt_tracker_status" }),
+                    search.createColumn({ name: "custrecord_tt_memo" }),
+                ],
             });
             const transactionTrackerInfo = [];
             trackerObj.run().each((result) => {
@@ -121,8 +112,8 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
 
         } catch (error) {
             log.error({
-            title: "Error in queryTracker",
-            details: error.toString(),
+                title: "Error in queryTracker",
+                details: error.toString(),
             });
             return [];
         }
@@ -445,20 +436,20 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
             const DO_PARTIAL_RETURNED = "2";
             // Call function to set the tracker status with updated values
             if (selectedStatus === DO_PARTIAL_RETURNED && !memoText) {
-            showAlert(
-                "Action Required: Memo Missing",
-                "To proceed, please provide a memo when setting the status to 'DO: Partially Returned'. This memo helps to track partial returns and maintain accurate records."
-            );
-            return; // Exit the function if memo is required
+                showAlert(
+                    "Action Required: Memo Missing",
+                    "To proceed, please provide a memo when setting the status to 'DO: Partially Returned'. This memo helps to track partial returns and maintain accurate records."
+                );
+                return; // Exit the function if memo is required
             }
             if (selectedStatus) {
-            // console.log("Selected Tracker Value:", selectedStatus);
-            // console.log("Memo:", memoText);
-            setTrackerStatus(recordType, recordId, selectedStatus, memoText);
-            // Remove the popup from the DOM
-            document.body.removeChild(popupContainer);
+                // console.log("Selected Tracker Value:", selectedStatus);
+                // console.log("Memo:", memoText);
+                setTrackerStatus(recordType, recordId, selectedStatus, memoText);
+                // Remove the popup from the DOM
+                document.body.removeChild(popupContainer);
             } else {
-            alert("Please select a tracker status.");
+                alert("Please select a tracker status.");
             }
         });
 
@@ -544,11 +535,11 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
             document.body.removeChild(alertContainer);
         });
     }
-  
-    // return {
-    //     // pageInit,
-    //     updateTrackerStatus,
-    //     setTrackerStatus,
-    // };
+
+    // expose the function to UE created elements
+    return {
+        updateTrackerStatus,
+        setTrackerStatus,
+    };
 
   });
