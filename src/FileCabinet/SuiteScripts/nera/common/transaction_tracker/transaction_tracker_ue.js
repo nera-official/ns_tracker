@@ -87,26 +87,21 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
     
     // By default, we want to create a new Tracker record for every new record
     function afterSubmit(context) {
-        try {
-            const { newRecord, type, UserEventType } = context;
+        const { newRecord, type, UserEventType } = context;
+
+        // Qualify: Only For New Record
+        if (type == UserEventType.CREATE) {
     
-            // Qualify: Only For New Record
-            if (type == UserEventType.CREATE) {
-        
-                const trackers = getRelatedTrackers(newRecord.type, newRecord.id); // get all related trackers for this transaction
+            const trackers = getRelatedTrackers(newRecord.type, newRecord.id); // get all related trackers for this transaction
 
-                // No related trackers found, create one
-                if (trackers!=null && trackers.length==0) {
-                    createTracker(
-                        newRecord.type,
-                        newRecord.id,
-                        CONSTANTS.DEFAULT_TRACKER_STATUS
-                    );
-                }
+            // No related trackers found, create one
+            if (trackers!=null && trackers.length==0) {
+                createTracker(
+                    newRecord.type,
+                    newRecord.id,
+                    CONSTANTS.DEFAULT_TRACKER_STATUS
+                );
             }
-
-        } catch (error) {
-            // log.error({ title: "Error in afterSubmit", details: error.message });
         }
     };
 
@@ -151,7 +146,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             });
 
             // inform the user
-            message.create({
+            msg.create({
                 title: "Transaction Tracker",
                 message: "You don't have permission to View Transaction Tracker",
                 type: message.Type.INFORMATION
@@ -239,7 +234,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             log.error({ title: "createTracker", details: error.message });
 
             // inform the user
-            message.create({
+            msg.create({
                 title: "Transaction Tracker",
                 message: "You don't have permission to Create Transaction Tracker",
                 type: message.Type.INFORMATION
