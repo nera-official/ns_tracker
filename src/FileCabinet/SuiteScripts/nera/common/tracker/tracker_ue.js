@@ -58,24 +58,26 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
 
     function beforeLoad(context) {
         try {
-            const { newRecord, form } = context;
+            // const { newRecord, form } = context;
+            const newRecord = context.newRecord;
+            const form = context.form;
             const recordId = newRecord.id;
             const recordType = newRecord.type;
     
             const executionContext = getExecutionContext();
             // log.debug("Execution Context", executionContext);
     
+            // Qualify: Not Create Mode
             if (context.type === "create") {
-                // log.debug("Info", "Not in create mode. Skipping...");
                 return;
             }
     
             const currentRole = String(runtime.getCurrentUser().role);
     
             const allowedRoles = [
-            ...getRoleInternalIds("Finance").split(","),
-            ...getRoleInternalIds("Nera SA").split(","),
-            ...getRoleInternalIds("Nera Logistics").split(","),
+                ...getRoleInternalIds("Finance").split(","),
+                ...getRoleInternalIds("Nera SA").split(","),
+                ...getRoleInternalIds("Nera Logistics").split(","),
             ];
     
             if (!allowedRoles.includes(currentRole)) {
@@ -95,6 +97,7 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             });
     
             form.clientScriptModulePath = CONSTANTS.UI.CLIENT_SCRIPT_PATH;
+
         } catch (error) {
             // log.error({ title: "Error in beforeLoad", details: error.message });
         }
