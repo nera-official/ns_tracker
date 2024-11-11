@@ -21,7 +21,7 @@
  * =========================================================================================================
  */
 
-define(["N/log", "N/query", "N/runtime", "N/record", 'N/ui/message'], function( log, query, runtime, record,  msg) {
+define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, record,  msg) {
 
     /*********************************
      * CONSTANTS
@@ -257,4 +257,4 @@ define(["N/log", "N/query", "N/runtime", "N/record", 'N/ui/message'], function( 
         afterSubmit 
     };
 
-  });
+});
