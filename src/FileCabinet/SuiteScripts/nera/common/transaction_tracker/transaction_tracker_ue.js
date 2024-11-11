@@ -11,8 +11,8 @@
  * - Deploy this script Any transaction record types that require tracking 
  * 
  * Script Info:
- * @name tracker_ue
- * @link tracker_cs.js, customrecord_nera_transaction_tracker
+ * @name transaction_tracker_ue
+ * @link transaction_tracker_cs.js, customrecord_nera_transaction_tracker
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  * @author Min Myat Oo <minmyatoo@nera.net>
@@ -21,7 +21,7 @@
  * =========================================================================================================
  */
 
-define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log, query, runtime, record,  search) {
+define(["N/log", "N/query", "N/runtime", "N/record", 'N/ui/message'], function( log, query, runtime, record,  msg) {
 
     /*********************************
      * CONSTANTS
@@ -36,7 +36,6 @@ define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log,
         TRACKER_FIELDS: {
             LINKED_TRANSACTION: "custrecord_tt_linked_transaction",
             RECORD_TYPES: "custrecord_tt_record_types",
-            INTERNAL_ID: "custrecord_tt_internalid",
             TRACKER_STATUS: "custrecord_tt_tracker_status",
             MEMO: "custrecord_tt_memo",
         },
@@ -97,12 +96,13 @@ define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log,
                 const trackers = getRelatedTrackers(newRecord.type, newRecord.id); // get all related trackers for this transaction
 
                 // No related trackers found, create one
-                if (trackers!=null && trackers.length==0)        
-                createTracker(
-                    newRecord.type,
-                    newRecord.id,
-                    CONSTANTS.DEFAULT_TRACKER_STATUS
-                );
+                if (trackers!=null && trackers.length==0) {
+                    createTracker(
+                        newRecord.type,
+                        newRecord.id,
+                        CONSTANTS.DEFAULT_TRACKER_STATUS
+                    );
+                }
             }
 
         } catch (error) {
@@ -143,11 +143,24 @@ define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log,
 
             // User has no permission to this custom record, SuiteQL will fail with permission error
             // this could be intentional, but this feature will not proceed for this record
+
+            // Log error, so that we can track which roles having this permisison issue
             log.error({
                 title: "getRelatedTrackers",
                 details: `${error.message}`
             });
-            return null; // null indicates error on SuiteQL
+
+            // inform the user
+            message.create({
+                title: "Transaction Tracker",
+                message: "You don't have permission to View Transaction Tracker",
+                type: message.Type.INFORMATION
+            }).show({
+                duration: 10000 // Duration in milliseconds (10 seconds)
+            });
+            
+            // null indicates error on SuiteQL
+            return null; 
         }
     };
 
@@ -222,8 +235,20 @@ define(["N/log", "N/query", "N/runtime", "N/record", "N/search"], function( log,
         } catch (error) {
 
             // Permission error will cause the tracker creation failure
+            // log error so that we can track which role is missing this permission
             log.error({ title: "createTracker", details: error.message });
-            return null;  // null indicates error
+
+            // inform the user
+            message.create({
+                title: "Transaction Tracker",
+                message: "You don't have permission to Create Transaction Tracker",
+                type: message.Type.INFORMATION
+            }).show({
+                duration: 10000 // Duration in milliseconds (10 seconds)
+            });
+            
+            // null indicates error
+            return null;  
         }
     };
   

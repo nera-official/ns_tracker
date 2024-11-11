@@ -8,8 +8,8 @@
  * Deployment: Not Deployed, instaed inject this CS from associated UE
  *
  * Script Information:
- * @name tracker_cs.js
- * @link tracker_ue.js, customrecord_nera_transaction_tracker
+ * @name transaction_tracker_cs.js
+ * @link transaction_tracker_ue.js, customrecord_nera_transaction_tracker
  * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @author Min Myat Oo <minmyatoo@nera.net>
