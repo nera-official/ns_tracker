@@ -1,6 +1,6 @@
 /**
  * =========================================================================================================
- * NetSuite Tracker
+ * NetSuite Tracker - Client Script
  * =========================================================================================================
  *
  * Purpose:
@@ -10,7 +10,7 @@
  *
  * Script Information:
  * @name tracker_cs.js
- * @link tracker_ue.js
+ * @link tracker_ue.js, customrecord_xxx
  * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @author Min Myat Oo <minmyatoo@nera.net>

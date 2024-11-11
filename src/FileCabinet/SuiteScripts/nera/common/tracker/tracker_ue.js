@@ -1,9 +1,26 @@
 /**
+ * =========================================================================================================
+ * Tracker - User Event Script
+ * =========================================================================================================
+ *
+ * Purpose:
+
+ * 
+ * Deployment:
+ * - Deploy this script Any transaction record types that require tracking 
+
+ * 
+ * Script Info:
+ * @name tracker_ue
+ * @link tracker_cs.js, customrecord_xxx
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
- * @ScriptOwner Min Myat Oo <minmyatoo@nera.net>
- * @Description Transaction tracker management for delivery orders and related records
+ * @author Min Myat Oo <minmyatoo@nera.net>
+ * @copyright Copyright (c) 2024 NERA Telecommunications
+ * 
+ * =========================================================================================================
  */
+
 define(["N/log", "N/search", "N/runtime", "N/record"], function(
     log,
     search,
@@ -46,11 +63,11 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             const recordType = newRecord.type;
     
             const executionContext = getExecutionContext();
-            log.debug("Execution Context", executionContext);
+            // log.debug("Execution Context", executionContext);
     
             if (context.type === "create") {
-            log.debug("Info", "Not in create mode. Skipping...");
-            return;
+                // log.debug("Info", "Not in create mode. Skipping...");
+                return;
             }
     
             const currentRole = String(runtime.getCurrentUser().role);
@@ -62,24 +79,24 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             ];
     
             if (!allowedRoles.includes(currentRole)) {
-            log.debug("Info", "Role is not allowed. Skipping...");
-            return;
+                // log.debug("Info", "Role is not allowed. Skipping...");
+                return;
             }
     
             const trackerInfo = queryTracker(recordType, recordId)[0];
             if (trackerInfo?.trackerStatus) {
-            addTrackerFields(context, trackerInfo);
+                addTrackerFields(context, trackerInfo);
             }
     
             form.addButton({
-            id: "custpage_do_action",
-            label: CONSTANTS.UI.BUTTON_LABEL,
-            functionName: `updateTrackerStatus('${recordType}', '${recordId}')`,
+                id: "custpage_do_action",
+                label: CONSTANTS.UI.BUTTON_LABEL,
+                functionName: `updateTrackerStatus('${recordType}', '${recordId}')`,
             });
     
             form.clientScriptModulePath = CONSTANTS.UI.CLIENT_SCRIPT_PATH;
         } catch (error) {
-            log.error({ title: "Error in beforeLoad", details: error.message });
+            // log.error({ title: "Error in beforeLoad", details: error.message });
         }
     };
   
@@ -91,21 +108,22 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
     
             const recordId = newRecord.id;
             if (checkIfRecordExists(recordId)) {
-            log.debug({
-                title: "Record Already Tracked",
-                details: `DO ID ${recordId} is already tracked.`,
-            });
+            // log.debug({
+            //     title: "Record Already Tracked",
+            //     details: `DO ID ${recordId} is already tracked.`,
+            // });
             return;
             }
     
             createTracker({
-            recordType: newRecord.type,
-            recordId,
-            trackerStatus: CONSTANTS.DEFAULT_TRACKER_STATUS,
-            memo: "",
+                recordType: newRecord.type,
+                recordId,
+                trackerStatus: CONSTANTS.DEFAULT_TRACKER_STATUS,
+                memo: "",
             });
+
         } catch (error) {
-            log.error({ title: "Error in afterSubmit", details: error.message });
+            // log.error({ title: "Error in afterSubmit", details: error.message });
         }
     };
 
@@ -123,46 +141,47 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
         try {
             // Check if recordId is empty, null, or undefined
             if (!recordId) {
-            log.debug("Info", "RecordId is empty. Skipping tracker query...");
-            return [];
+                log.debug("Info", "RecordId is empty. Skipping tracker query...");
+                return [];
             }
     
             // Check if recordType is empty
             if (!recordType) {
-            log.debug("Info", "RecordType is empty. Skipping tracker query...");
-            return [];
+                log.debug("Info", "RecordType is empty. Skipping tracker query...");
+                return [];
             }
     
             const searchResults = [];
             const trackerSearch = search.create({
-            type: CONSTANTS.RECORDS.TRANSACTION_TRACKER,
-            filters: [
-                [CONSTANTS.FIELDS.RECORD_TYPES, "is", recordType],
-                "AND",
-                [CONSTANTS.FIELDS.INTERNAL_ID, "is", recordId],
-            ],
-            columns: [
-                "internalid",
-                CONSTANTS.FIELDS.TRACKER_STATUS,
-                CONSTANTS.FIELDS.MEMO,
-            ].map((name) => search.createColumn({ name })),
+                type: CONSTANTS.RECORDS.TRANSACTION_TRACKER,
+                filters: [
+                    [CONSTANTS.FIELDS.RECORD_TYPES, "is", recordType],
+                    "AND",
+                    [CONSTANTS.FIELDS.INTERNAL_ID, "is", recordId],
+                ],
+                columns: [
+                    "internalid",
+                    CONSTANTS.FIELDS.TRACKER_STATUS,
+                    CONSTANTS.FIELDS.MEMO,
+                ].map((name) => search.createColumn({ name })),
             });
     
             trackerSearch.run().each((result) => {
-            searchResults.push({
-                internalid: result.getValue("internalid"),
-                trackerStatus: result.getText(CONSTANTS.FIELDS.TRACKER_STATUS),
-                memo: result.getValue(CONSTANTS.FIELDS.MEMO),
-            });
-            return true;
+                searchResults.push({
+                    internalid: result.getValue("internalid"),
+                    trackerStatus: result.getText(CONSTANTS.FIELDS.TRACKER_STATUS),
+                    memo: result.getValue(CONSTANTS.FIELDS.MEMO),
+                });
+                return true;
             });
     
             return searchResults;
+
         } catch (error) {
-            log.error({
-            title: "Error in queryTracker",
-            details: `Error occurred for recordType: ${recordType}, recordId: ${recordId}. ${error.message}`,
-            });
+            // log.error({
+            //     title: "Error in queryTracker",
+            //     details: `Error occurred for recordType: ${recordType}, recordId: ${recordId}. ${error.message}`,
+            // });
             return [];
         }
     };
@@ -176,26 +195,26 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
         try {
             const roleIds = [CONSTANTS.ROLES.SYSTEM_ADMIN]; // Include default admin role
             const roleSearch = search.create({
-            type: "role",
-            filters: [
-                ["name", "contains", contains],
-                "AND",
-                ["isinactive", "is", "F"],
-            ],
-            columns: ["internalid"],
-            });
-    
-            roleSearch.run().each((result) => {
-            roleIds.push(result.getValue("internalid"));
-            return true;
+                type: "role",
+                filters: [
+                    ["name", "contains", contains],
+                    "AND",
+                    ["isinactive", "is", "F"],
+                ],
+                columns: ["internalid"],
+                });
+        
+                roleSearch.run().each((result) => {
+                roleIds.push(result.getValue("internalid"));
+                return true;
             });
     
             return roleIds.join(",");
         } catch (error) {
-            log.error({
-            title: "Error in getRoleInternalIds",
-            details: error.message,
-            });
+            // log.error({
+            //     title: "Error in getRoleInternalIds",
+            //     details: error.message,
+            // });
             return "";
         }
     };
@@ -227,15 +246,15 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
     
         fields.forEach(({ id, label, value }) => {
             const field = form.addField({
-            id,
-            label,
-            type: "text",
-            container: "main",
+                id,
+                label,
+                type: "text",
+                container: "main",
             });
     
             form.insertField({
-            field,
-            nextfield: "custbody_nera_notes",
+                field,
+                nextfield: "custbody_nera_notes",
             });
     
             field.defaultValue = value;
@@ -268,27 +287,28 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
     function createTracker({ recordType, recordId, trackerStatus, memo }) {
         try {
             const trackerRecord = record.create({
-            type: CONSTANTS.RECORDS.TRANSACTION_TRACKER,
+                type: CONSTANTS.RECORDS.TRANSACTION_TRACKER,
             });
     
             const fields = {
-            [CONSTANTS.FIELDS.RECORD_TYPES]: recordType,
-            [CONSTANTS.FIELDS.INTERNAL_ID]: recordId,
-            [CONSTANTS.FIELDS.LINKED_TRANSACTION]: recordId,
-            [CONSTANTS.FIELDS.TRACKER_STATUS]: trackerStatus,
-            [CONSTANTS.FIELDS.MEMO]: memo,
+                [CONSTANTS.FIELDS.RECORD_TYPES]: recordType,
+                [CONSTANTS.FIELDS.INTERNAL_ID]: recordId,
+                [CONSTANTS.FIELDS.LINKED_TRANSACTION]: recordId,
+                [CONSTANTS.FIELDS.TRACKER_STATUS]: trackerStatus,
+                [CONSTANTS.FIELDS.MEMO]: memo,
             };
     
             Object.entries(fields).forEach(([fieldId, value]) => {
-            trackerRecord.setValue({ fieldId, value });
+                trackerRecord.setValue({ fieldId, value });
             });
     
             const ttId = trackerRecord.save();
             log.debug({
-            title: "Transaction Tracker Created",
-            details: `ID: ${ttId}`,
+                title: "Transaction Tracker Created",
+                details: `ID: ${ttId}`,
             });
             return ttId;
+
         } catch (error) {
             log.error({ title: "Error in createTracker", details: error.message });
             return null;
@@ -305,14 +325,18 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
             "User Information": { name, email },
             "Role Details": { roleCenter },
             };
+
         } catch (error) {
-            log.error({
-            title: "Error in getExecutionContext",
-            details: `Failed to get execution context: ${error.message}`,
+                log.error({
+                title: "Error in getExecutionContext",
+                details: `Failed to get execution context: ${error.message}`,
             });
             return {};
         }
     };
   
-        return { beforeLoad, afterSubmit };
+    return { 
+        beforeLoad, 
+        afterSubmit 
+    };
   });

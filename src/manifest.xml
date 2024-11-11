@@ -1,4 +1,4 @@
 <manifest projecttype="ACCOUNTCUSTOMIZATION">
-  <projectname>ns_transaction_tracker</projectname>
+  <projectname>ns_tracker</projectname>
   <frameworkversion>1.0</frameworkversion>
 </manifest>
