@@ -5,12 +5,11 @@
  *
  * Purpose:
  *  
- * Deployment:
- * - Deploy this script Any transaction record types that require tracking 
+ * Deployment: Not Deployed, instaed inject this CS from associated UE
  *
  * Script Information:
  * @name tracker_cs.js
- * @link tracker_ue.js, customrecord_xxx
+ * @link tracker_ue.js, customrecord_nera_transaction_tracker
  * @NApiVersion 2.1
  * @NScriptType ClientScript
  * @author Min Myat Oo <minmyatoo@nera.net>
@@ -377,9 +376,11 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
         memoTextArea.style.border = "1px solid #ddd";
         memoTextArea.style.borderRadius = "4px";
         memoTextArea.style.fontSize = "14px";
+
         // Set the memo field value if available
         memoTextArea.value = selectedMemo; // Populate the memo field with the retrieved value or leave it empty
         formContainer.appendChild(memoTextArea);
+
         // Create help text under the memo field
         const helpText = document.createElement("div");
         helpText.textContent = `Memo is to indicate info for items which are being returned (eg. item code, Qty, serial number, etc.) and to indicate reason for goods being returned.`;
@@ -387,12 +388,14 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
         helpText.style.color = "#6c757d";
         helpText.style.marginTop = "5px";
         formContainer.appendChild(helpText);
+
         // Create a button container
         const buttonContainer = document.createElement("div");
         buttonContainer.style.display = "flex";
         buttonContainer.style.justifyContent = "flex-end";
         buttonContainer.style.marginTop = "20px";
         popupContainer.appendChild(buttonContainer);
+
         // Create OK button
         const okButton = document.createElement("button");
         okButton.textContent = "OK";
@@ -412,6 +415,7 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
             okButton.style.backgroundColor = "#007bff";
         };
         buttonContainer.appendChild(okButton);
+
         // Create Cancel button
         const cancelButton = document.createElement("button");
         cancelButton.textContent = "Cancel";
@@ -430,8 +434,10 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
             cancelButton.style.backgroundColor = "#6c757d";
         };
         buttonContainer.appendChild(cancelButton);
+
         // Append the popup to the body
         document.body.appendChild(popupContainer);
+
         // Add event listener for the OK button
         okButton.addEventListener("click", function () {
             const selectedStatus = trackerSelect.value;
@@ -455,6 +461,7 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
             alert("Please select a tracker status.");
             }
         });
+
         // Add event listener for the Cancel button
         cancelButton.addEventListener("click", function () {
             // Remove the popup from the DOM
@@ -538,10 +545,10 @@ define(["N/record", "N/search", "N/log", "N/ui/message"], function (
         });
     }
   
-    return {
-        pageInit,
-        updateTrackerStatus,
-        setTrackerStatus,
-    };
+    // return {
+    //     // pageInit,
+    //     updateTrackerStatus,
+    //     setTrackerStatus,
+    // };
 
   });

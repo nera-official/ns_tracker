@@ -12,7 +12,7 @@
  * 
  * Script Info:
  * @name tracker_ue
- * @link tracker_cs.js, customrecord_xxx
+ * @link tracker_cs.js, customrecord_nera_transaction_tracker
  * @NApiVersion 2.1
  * @NScriptType UserEventScript
  * @author Min Myat Oo <minmyatoo@nera.net>
@@ -31,6 +31,8 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
     /*********************************
      * CONSTANTS
      *********************************/
+    const CLIENT_SCRIPT_FILE = './tracker_cs.js';
+
     const CONSTANTS = {
         RECORDS: {
             TRANSACTION_TRACKER: "customrecord_nera_transaction_tracker",
@@ -48,7 +50,7 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
         },
         UI: {
             BUTTON_LABEL: "Update Tracker Status",
-            CLIENT_SCRIPT_PATH: "./do_cs_update_tracker_status",
+            CLIENT_SCRIPT_PATH: CLIENT_SCRIPT_FILE,
         },
     };
   
@@ -58,20 +60,20 @@ define(["N/log", "N/search", "N/runtime", "N/record"], function(
 
     function beforeLoad(context) {
         try {
-            // const { newRecord, form } = context;
+
+            // Qualify: Not Create Mode
+            if (context.type === "create") {
+                return;
+            }
+    
             const newRecord = context.newRecord;
             const form = context.form;
             const recordId = newRecord.id;
             const recordType = newRecord.type;
     
             const executionContext = getExecutionContext();
-            // log.debug("Execution Context", executionContext);
-    
-            // Qualify: Not Create Mode
-            if (context.type === "create") {
-                return;
-            }
-    
+            // log.debug("Execution Context", executionContext);            
+
             const currentRole = String(runtime.getCurrentUser().role);
     
             const allowedRoles = [
