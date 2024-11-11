@@ -26,7 +26,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
     /*********************************
      * CONSTANTS
      *********************************/
-    const CLIENT_SCRIPT_PATH = './tracker_cs.js';
+    const CLIENT_SCRIPT_PATH = './transaction_tracker_cs.js';
 
     const CONSTANTS = {
         RECORDS: {
@@ -43,8 +43,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             SYSTEM_ADMIN: "3",
         },
         UI: {
-            BUTTON_LABEL: "Update Tracker Status",
-            CLIENT_SCRIPT_PATH: CLIENT_SCRIPT_PATH,
+            BUTTON_LABEL: "Update Tracker Status"
         },
     };
   
@@ -71,7 +70,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
         form.addButton({
             id: "custpage_do_action",
             label: CONSTANTS.UI.BUTTON_LABEL,
-            functionName: `updateTrackerStatus('${recordType}', '${recordId}')`,
+            functionName: `updateTrackerStatus('${newRecord.recordType}', '${newRecord.recordId}')`,
         });
 
         // Create Tracker Info Fields
@@ -81,7 +80,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
         }
 
         // Inject Client Script
-        form.clientScriptModulePath = CONSTANTS.UI.CLIENT_SCRIPT_PATH;
+        form.clientScriptModulePath = CLIENT_SCRIPT_PATH;
 
     } 
     
@@ -127,11 +126,14 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             from
                 customrecord_nera_transaction_tracker
             where 
-                custrecord_tt_record_types = ${recordType} and
+                custrecord_tt_record_types = '${recordType}' and
                 custrecord_tt_internalid = ${recordId}
             order by id desc
             `;
-
+            // log.debug({
+            //     title: "getRelatedTrackers",
+            //     details: `${sql}`
+            // });
             return querySuiteQL(sql);
 
         } catch (error) {
@@ -149,7 +151,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             msg.create({
                 title: "Transaction Tracker",
                 message: "You don't have permission to View Transaction Tracker",
-                type: message.Type.INFORMATION
+                type: msg.Type.INFORMATION
             }).show({
                 duration: 10000 // Duration in milliseconds (10 seconds)
             });
@@ -237,7 +239,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message'], function( log, query, r
             msg.create({
                 title: "Transaction Tracker",
                 message: "You don't have permission to Create Transaction Tracker",
-                type: message.Type.INFORMATION
+                type: msg.Type.INFORMATION
             }).show({
                 duration: 10000 // Duration in milliseconds (10 seconds)
             });

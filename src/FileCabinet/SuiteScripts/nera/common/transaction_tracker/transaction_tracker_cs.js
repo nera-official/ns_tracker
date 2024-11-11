@@ -24,7 +24,7 @@ define(["N/record", "N/query", "N/log", "N/ui/message", "N/search"], function (r
      * CONSTANTS
      *********************************/
     const TRANSACTION_TRACKER_RECORD = "customrecord_nera_transaction_tracker";
-  
+
     /*********************************
      * HELPERS
      *********************************/
