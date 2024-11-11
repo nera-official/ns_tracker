@@ -2,7 +2,7 @@
  * =========================================================================================================
  * Tracker - User Event Script
  * =========================================================================================================
- *
+ * 
  * Purpose:
  * - Provide an 1-1 tracking custom record (fields: custom status, memo)
  * - Example use case is a period-locked transaction can use this feature to record a custom tracker
