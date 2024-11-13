@@ -5,7 +5,7 @@
  *
  * Purpose:
  *  
- * Deployment: Not Deployed, instaed inject this CS from associated UE
+ * Deployment: Do Not Deploy, instaed inject this CS from associated UE
  *
  * Script Information:
  * @name transaction_tracker_cs.js
@@ -18,528 +18,351 @@
  * =========================================================================================================
  */
 
-define(["N/record", "N/query", "N/log", "N/ui/message", "N/search"], function (record, query, log, message, search) {
+define(["N/currentRecord", "N/record", "N/query", "N/log", "N/ui/message", "N/runtime"], 
+function (currentRecord, record, query, log, msg, runtime) {
 
     /*********************************
      * CONSTANTS
      *********************************/
-    const TRANSACTION_TRACKER_RECORD = "customrecord_nera_transaction_tracker";
-
-    /*********************************
-     * HELPERS
-     *********************************/
-
-    /**
-     * Updates the transaction tracker record with the specified status and memo.
-     *
-     * @param {string} recordType - The type of the record to be updated.
-     * @param {number} internalId - The internal ID of the transaction tracker record.
-     * @param {string} trackerStatus - The new status to set for the tracker.
-     * @param {string} memo - The memo to set for the tracker.
-     * @throws {Error} Throws an error if the record cannot be loaded or saved.
-     */
-    function updateTracker(recordType, internalId, trackerStatus, memo) {
-        try {
-            // Load the existing transaction tracker record
-            const transactionTracker = record.load({
-                type: recordType,
-                id: internalId,
-            });
-            // Set the value for the 'custrecord_tt_tracker_status' field
-            transactionTracker.setValue({
-                fieldId: "custrecord_tt_tracker_status",
-                value: trackerStatus,
-            });
-            transactionTracker.setValue({
-                fieldId: "custrecord_tt_memo",
-                value: memo,
-            });
-            // Save the updated record
-            transactionTracker.save();
-            // console.log(`Transaction tracker record with internal ID ${internalId} updated successfully.`);
-
-        } catch (error) {
-            // console.error("[Error in updateTransactionTracker]", error);
-        }
+    const TRACKER_RECORD_TYPE = "customrecord_nera_transaction_tracker";
+    const DEFAULT_TRACKER_STATUS = 5; // DO: Created, Pending Delivery (Tracker Status)
+    const TRACKER_RECORD_FIELDS = {
+        LINKED_TRANSACTION: "custrecord_tt_linked_transaction",
+        RECORD_TYPE: "custrecord_tt_record_types",
+        STATUS: "custrecord_tt_tracker_status",
+        MEMO: "custrecord_tt_memo",
+    };
+    const UI = {
+        UPDATE_TRACKER_BUTTON_ID: 'custpage_do_action',
+        UPDATE_TRACKER_BUTTON_LABEL: "Update Tracker Status",
+        TRACKER_FIELD_GROUP_ID: 'custpage_tracker_fieldgroup',
+        TRACKER_FIELD_GROUP_LABEL: "Transaction Tracker",
+        TRACKER_STATUS_NAME_ID: 'custpage_tracker_status',
+        TRACKER_STATUS_NAME_LABEL: 'Status',
+        TRACKER_MEMO_ID: 'custpage_tracker_memo',
+        TRACKER_MEMO_LABEL: 'Memo',
+        TRACKER_UPDATED_BY_ID: 'custpage_tracker_updatedby',
+        TRACKER_UPDATED_BY_LABEL: 'Updated By',
+        TRACKER_UPDATED_ON_ID: 'custpage_tracker_updatedon',
+        TRACKER_UPDATED_ON_LABEL: 'Updated On',
+        TRACKER_STATUS_ID: 'custpage_trakcer_status_id',
+        TRACKER_STATUS_LABEL: 'Status Internal ID',
+        TRACKER_INTERNAL_ID: 'custpage_tracker_internal_id',
+        TRACKER_INTERNAL_ID_LABEL: 'Tracker Internal ID'
+    };
+    const WEBIX = {
+        TRACKER_FORM_ID : 'wb_tracker_form'
     }
 
-    /**
-     * Queries transaction tracker records by record type and ID.
+    let STATUS_OPTIONS = [];
 
-     * @param {string} recordType - The type of the record.
-     * @param {number} recordId - The internal ID of the record. If empty, returns an empty array.
-     * @returns {Array<Object>} An array of transaction tracker information.
-     */ 
-    function queryTracker(recordType, recordId) {
-        try {
-            // Check if recordId is empty, null, or undefined
-            if (!recordId) {
-                log.debug("Info", "RecordId is empty. Skipping tracker query...");
-                return [];
+    /*********************************
+     * Start Up
+     *********************************/
+
+    // load the current record
+   
+    const THIS_RECORD = currentRecord.get();
+
+    // query tracker record and update form, only if this is an existing transaction
+    // updateFormTracker();
+
+    // Inject Webix if Not Already Loaded by Other Scripts
+    if (typeof webix === 'undefined') {
+
+        injectCSS([
+            'https://neracdn.azureedge.net/webix/webix.min.css',
+            'https://neracdn.azureedge.net/material-font/css/materialdesignicons.min.css'
+        ]);
+    
+        injectScripts([
+            'https://neracdn.azureedge.net/webix/webix.min.js'
+        ]);
+    }
+
+
+    /*********************************
+     * Injectors
+     *********************************/
+
+    function injectCSS(css_array) {
+        css_array.forEach(css_link => {
+            let link_elem = document.createElement("link");
+            link_elem.rel = "stylesheet"; 
+            link_elem.type = "text/css";
+            link_elem.href = css_link;
+            document.head.appendChild(link_elem);  
+        });
+    };
+
+    function injectScripts(script_array) {
+        script_array.forEach(script_link => {
+            let script_elem  = document.createElement('script');
+            script_elem.type = 'text/javascript';
+            script_elem.async = false;										
+            script_elem.src  = script_link;
+            document.head.appendChild(script_elem); 
+        });
+    };
+   
+
+    /*********************************
+     * UI OPERATION
+     *********************************/
+
+    // Pop up Webix Form
+    function showTrackerPopup() {
+
+        // Depending on Form mode, get the related tracker info
+        const tracker_info = (THIS_RECORD.isDynamic || THIS_RECORD.isNew)
+            ? getTrackerInfoFromUI(THIS_RECORD.type, THIS_RECORD.id)
+            : getTrackerInfoFromSql(THIS_RECORD.type, THIS_RECORD.id)
+
+        // Get The List Of Status
+        const status_sql = `
+            select
+                id, name as value
+            from
+                CUSTOMLIST_NERA_TRACKER_STATUS
+            order by name ASC
+        `;
+        STATUS_OPTIONS = querySuiteQL(status_sql);
+
+        // Construct and Display The Popup
+        webix.ui({
+            view:"window",
+            head:"Transaction Tracker",
+            position:"center",
+            move:true,
+            body:{
+                type: 'space',
+                margin: 5,
+                rows: [
+                {
+                    view: 'form',
+                    id: WEBIX.TRACKER_FORM_ID,
+                    scroll: false,
+                    elements: [
+                        { id: 'id',     name: 'id', view:"text", value: tracker_info.id, label:"Tracker ID", disabled: true},
+                        // { id: 'transaction_id',     name: 'transaction_id', view:"text", value: tracker.transaction_id, label:"Transaction ID", disabled: true},
+                        { id: 'status', name: 'status', view:"select", width: 350, options: STATUS_OPTIONS, value: tracker_info.status_id||DEFAULT_TRACKER_STATUS, label:"Status"},
+                        { id: 'memo',   name: 'memo',   view:"text",   value: tracker_info.memo, label:"Memo", label:"Memo"},
+                        { 
+                            margin:5, 
+                            cols:[
+                                { view:"button", value:"Cancel", click: _btnCancel },
+                                { view:"button", value:"Update", click: _btnUpdate, css:"webix_primary"}
+                            ]
+                        }
+                    ]
+                }
+                ]
             }
-            const trackerObj = search.create({
-                type: "customrecord_nera_transaction_tracker",
-                filters: [
-                    ["custrecord_tt_record_types", "is", recordType],
-                    "AND",
-                    ["custrecord_tt_internalid", "is", recordId],
-                ],
-                columns: [
-                    search.createColumn({ name: "internalid", sort: search.Sort.ASC }),
-                    search.createColumn({ name: "custrecord_tt_tracker_status" }),
-                    search.createColumn({ name: "custrecord_tt_memo" }),
-                ],
-            });
-            const transactionTrackerInfo = [];
-            trackerObj.run().each((result) => {
-                const internalid = result.getValue({ name: "internalid" });
-                const trackerStatus = result.getValue({
-                    name: "custrecord_tt_tracker_status",
-                });
-                const trackerStatusText = result.getText({
-                    name: "custrecord_tt_tracker_status",
-                });
-                const trackerMemo = result.getValue({ name: "custrecord_tt_memo" });
-                transactionTrackerInfo.push({
-                    internalid,
-                    trackerStatus,
-                    trackerStatusText,
-                    trackerMemo,
-                });
-                return true;
-            });
-            return transactionTrackerInfo;
+        }).show();
 
+        // User clicked "Close"
+        function _btnCancel() {
+            this.getTopParentView().close();
+        }
+
+        // User clicked "Update"
+        function _btnUpdate() {
+            
+            // Form is in EDIT or CREATE mode
+            if (THIS_RECORD.isDynamic || THIS_RECORD.isNew) {
+                updateWebixToNetSuiteForm();
+            }
+
+            // Form is in VIEW mode
+            if (THIS_RECORD.isReadOnly) {
+                // save first, then reload page
+                updateWebixToNetSuiteRecord();
+            }
+            
+            // close the window
+            this.getTopParentView().close();
+        }
+
+    }
+
+    /*********************************
+     * DATA RETRIEVAL
+     *********************************/
+
+    // Return Result of SuiteQL
+    function querySuiteQL(sql) {
+        return query.runSuiteQL({query: sql}).asMappedResults();
+    }
+
+    // Get Tracker Info in VIEW mode, through SQL
+    //  return {id, status_id, memo, updated_on, updated_by, status_name}
+    function getTrackerInfoFromSql(record_type, transaction_id) {
+        try {
+
+            const sql = `
+            select
+                id,
+                TO_CHAR(lastmodified, 'YYYY-MM-DD') as updated_on,
+                BUILTIN.DF (lastmodifiedby) as updated_by,
+                BUILTIN.DF (${TRACKER_RECORD_FIELDS.STATUS}) as status_name,
+                ${TRACKER_RECORD_FIELDS.MEMO} as memo,
+                ${TRACKER_RECORD_FIELDS.STATUS} as status_id
+            from
+                ${TRACKER_RECORD_TYPE}
+            where 
+                ${TRACKER_RECORD_FIELDS.RECORD_TYPE} = '${record_type}' and
+                ${TRACKER_RECORD_FIELDS.LINKED_TRANSACTION} = ${transaction_id}
+            order by id desc
+            `;
+            
+            return querySuiteQL(sql)[0];
+       
         } catch (error) {
+
+            // Log error, so that we can track which roles having this permisison issue
             log.error({
-                title: "Error in queryTracker",
-                details: error.toString(),
+                title: "getRelatedTrackers",
+                details: `${error.message}`
             });
-            return [];
+            
+            // null indicates error on SuiteQL
+            return null; 
         }
     }
 
-    /**
-     * Creates a transaction tracker record with the specified details.
-     *
-     * @param {Object} obj - The object containing tracker details.
-     * @param {string} obj.recordType - The type of the record.
-     * @param {number} obj.recordId - The internal ID of the record.
-     * @param {string} obj.trackerStatus - The status of the tracker.
-     * @param {string} obj.memo - The memo for the tracker.
-     * @returns {number} The internal ID of the created transaction tracker record.
-     */
-    function createTracker(obj) {
-        try {
-            let { recordType, recordId, trackerStatus, memo } = obj;
-            // console.log("Obj", obj);
-            let tranTracker = record.create({
-                type: TRANSACTION_TRACKER_RECORD,
-            });
-            // Generate a unique name with a random number and timestamp (yymmddhhmmss)
-            const timestamp = new Date()
-            .toISOString()
-            .replace(/[-:.TZ]/g, "")
-            .slice(0, 12); // yymmddhhmmss
-            const randomNum = Math.floor(Math.random() * 1000) + 1; // Random number between 1 and 1000
-            const name = `TT${timestamp}${randomNum}`;
-            tranTracker.setValue({
-                fieldId: "custrecord_tt_record_types",
-                value: recordType,
-            });
-            tranTracker.setValue({
-                fieldId: "custrecord_tt_internalid",
-                value: recordId,
-            });
-            tranTracker.setValue({
-                fieldId: "custrecord_tt_linked_transaction",
-                value: recordId,
-            });
-            tranTracker.setValue({
-                fieldId: "custrecord_tt_tracker_status",
-                value: trackerStatus,
-            });
-            tranTracker.setValue({
-                fieldId: "custrecord_tt_memo",
-                value: memo,
-            });
-            const ttId = tranTracker.save({
-                ignoreMandatoryFields: false,
-            });
-            return ttId;
+    // Get tracker Info in CREATE/EDIT mode
+    //  return {id, status_id, memo, updated_on}
+    function getTrackerInfoFromUI() {
+        
+        const id = THIS_RECORD.getValue({
+            fieldId: UI.TRACKER_INTERNAL_ID
+        });
 
-        } catch (error) {
-            log.debug({
-                title: "[Error]",
-                details: error,
-            });
+        const status_id = THIS_RECORD.getValue({
+            fieldId: UI.TRACKER_STATUS_ID
+        });
+
+        const memo = THIS_RECORD.getValue({
+            fieldId: UI.TRACKER_MEMO_ID
+        });
+
+        return {
+            id: id,
+            status_id: status_id,
+            memo: memo
         }
     }
 
-    /**
-     * Sets the status of a transaction tracker record. If the record does not exist, it creates a new one.
-     *
-     * @param {string} recordType - The type of the record.
-     * @param {number} recordId - The internal ID of the record.
-     * @param {string} trackerStatus - The new status to set for the tracker.
-     * @param {string} memo - The memo to associate with the tracker.
-     */
-    function setTrackerStatus(recordType, recordId, trackerStatus, memo) {
-        try {
-            // console.log(recordType);
-            // console.log(recordId);
-            // console.log(trackerStatus);
-            let queryTrackerObj = queryTracker(recordType, recordId);
-            if (queryTrackerObj.length === 0) {
-                // If no record found, create a new one
-                // console.log("No transaction tracker record found. Creating a new one.");
-                createTracker({ recordType, recordId, trackerStatus, memo });
-            } else {
-                // If record found, update it
-                // console.log("Transaction tracker record found. Updating the existing record.");
-                updateTracker(
-                    TRANSACTION_TRACKER_RECORD,
-                    queryTrackerObj[0].internalid,
-                    trackerStatus,
-                    memo
-                );
-            }
-            // Show success message
-            message
-            .create({
-                title: "Success",
-                message: "Transaction tracker record updated successfully.",
-                type: message.Type.CONFIRMATION,
-            })
-            .show();
-            // Reload the window
-            setTimeout(function () {
-                window.location.reload();
-            }, 1000);
 
-        } catch (error) {
-            // console.error("[Error in doSigned]", error);
-        }
-    }
-  
-    /**
-     * Retrieves active tracker status options from the custom list.
-     *
-     * @returns {Array<Object>} An array of objects containing the internal ID and name of each tracker status.
-     */
-    function getTrackerStatus() {
-        const trackerObj = search.create({
-            type: "customlist_nera_tracker_status",
-            filters: [["isinactive", "is", "F"]],
-            columns: [
-            search.createColumn({ name: "name", label: "Name" }),
-            search.createColumn({
-                name: "internalid",
-                label: "Internal ID",
-                sort: search.Sort.ASC,
-            }),
-            ],
-        });
-        const searchResults = trackerObj.run();
-        const items = [];
-        searchResults.each(function (result) {
-            const name = result.getValue({ name: "name" });
-            const id = result.getValue({ name: "internalid" });
-            items.push({ id: id, name: name });
-            return true;
-        });
-        return items;
-    }
-
-    /**
-     * Updates the tracker status for a given record type and ID by displaying a popup for user input.
-     *
-     * @param {string} recordType - The type of the record to update.
-     * @param {number} recordId - The internal ID of the record to update.
-     */
-    function updateTrackerStatus(recordType, recordId) {
-        // Fetch the tracker data
-        const trackerData = queryTracker(recordType, recordId);
-        let selectedTrackerStatus = "";
-        let selectedMemo = "";
-        // Extract the first entry from the tracker data if it exists
-        if (trackerData.length > 0) {
-            selectedTrackerStatus = trackerData[0].trackerStatus; // Use the status value (not the text) to match the option value
-            selectedMemo = trackerData[0].trackerMemo || ""; // Set the memo field value, or default to an empty string
-        }
-        // Create a popup container
-        const popupContainer = document.createElement("div");
-        popupContainer.id = "popupContainer";
-        popupContainer.style.position = "fixed";
-        popupContainer.style.top = "50%";
-        popupContainer.style.left = "50%";
-        popupContainer.style.transform = "translate(-50%, -50%)";
-        popupContainer.style.width = "400px";
-        popupContainer.style.padding = "20px";
-        popupContainer.style.backgroundColor = "white";
-        popupContainer.style.borderRadius = "8px";
-        popupContainer.style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.2)";
-        popupContainer.style.zIndex = "1000";
-        popupContainer.style.fontFamily = "Arial, sans-serif";
-        popupContainer.style.border = "1px solid #ddd";
-        // Create a header for the popup (for dragging)
-        const header = document.createElement("div");
-        header.style.backgroundColor = "#007bff";
-        header.style.color = "white";
-        header.style.padding = "10px";
-        header.style.borderRadius = "8px 8px 0 0";
-        header.style.fontSize = "16px";
-        header.style.fontWeight = "bold";
-        header.style.textAlign = "center";
-        header.textContent = "Update Tracker Status";
-        header.style.cursor = "move"; // Set cursor to move
-        popupContainer.appendChild(header);
-        // Variables for dragging functionality
-        let isDragging = false;
-        let offsetX = 0;
-        let offsetY = 0;
-        // Mouse down event to start dragging
-        header.addEventListener("mousedown", (e) => {
-            isDragging = true;
-            offsetX = e.clientX - popupContainer.getBoundingClientRect().left;
-            offsetY = e.clientY - popupContainer.getBoundingClientRect().top;
-            document.body.style.userSelect = "none"; // Disable text selection during drag
-        });
-        // Mouse move event to move the popup
-        document.addEventListener("mousemove", (e) => {
-            if (isDragging) {
-            const x = e.clientX - offsetX;
-            const y = e.clientY - offsetY;
-            popupContainer.style.left = `${x}px`;
-            popupContainer.style.top = `${y}px`;
-            popupContainer.style.transform = "none"; // Remove the centering transformation
-            }
-        });
-        // Mouse up event to stop dragging
-        document.addEventListener("mouseup", () => {
-            isDragging = false;
-            document.body.style.userSelect = ""; // Re-enable text selection after drag
-        });
-        // Create a form container
-        const formContainer = document.createElement("div");
-        formContainer.style.display = "grid";
-        formContainer.style.gridTemplateColumns = "1fr";
-        formContainer.style.gap = "10px";
-        formContainer.style.marginTop = "10px";
-        popupContainer.appendChild(formContainer);
-        // Create a label and select box for tracker status
-        const trackerLabel = document.createElement("label");
-        trackerLabel.htmlFor = "trackerStatusSelect";
-        trackerLabel.textContent = "Select Tracker Status:";
-        trackerLabel.style.fontWeight = "bold";
-        formContainer.appendChild(trackerLabel);
-        const trackerSelect = document.createElement("select");
-        trackerSelect.id = "trackerStatusSelect";
-        trackerSelect.style.width = "100%";
-        trackerSelect.style.padding = "10px";
-        trackerSelect.style.border = "1px solid #ddd";
-        trackerSelect.style.borderRadius = "4px";
-        trackerSelect.style.fontSize = "14px";
-        // Add options to the select box
-        const trackerStatusList = getTrackerStatus();
-        trackerStatusList.forEach((status) => {
-            const option = document.createElement("option");
-            option.value = status.id;
-            option.textContent = status.name;
-            trackerSelect.appendChild(option);
-        });
-        // Set the selected tracker status if available
-        if (selectedTrackerStatus) {
-            trackerSelect.value = selectedTrackerStatus; // Set the dropdown to the value of the retrieved status
-        }
-        formContainer.appendChild(trackerSelect);
-        // Create a label and text area for the memo
-        const memoLabel = document.createElement("label");
-        memoLabel.htmlFor = "memoTextArea";
-        memoLabel.textContent = "Enter Memo:";
-        memoLabel.style.fontWeight = "bold";
-        formContainer.appendChild(memoLabel);
-        const memoTextArea = document.createElement("textarea");
-        memoTextArea.id = "memoTextArea";
-        memoTextArea.style.width = "100%";
-        memoTextArea.style.height = "100px";
-        memoTextArea.style.padding = "10px";
-        memoTextArea.style.border = "1px solid #ddd";
-        memoTextArea.style.borderRadius = "4px";
-        memoTextArea.style.fontSize = "14px";
-
-        // Set the memo field value if available
-        memoTextArea.value = selectedMemo; // Populate the memo field with the retrieved value or leave it empty
-        formContainer.appendChild(memoTextArea);
-
-        // Create help text under the memo field
-        const helpText = document.createElement("div");
-        helpText.textContent = `Memo is to indicate info for items which are being returned (eg. item code, Qty, serial number, etc.) and to indicate reason for goods being returned.`;
-        helpText.style.fontSize = "12px";
-        helpText.style.color = "#6c757d";
-        helpText.style.marginTop = "5px";
-        formContainer.appendChild(helpText);
-
-        // Create a button container
-        const buttonContainer = document.createElement("div");
-        buttonContainer.style.display = "flex";
-        buttonContainer.style.justifyContent = "flex-end";
-        buttonContainer.style.marginTop = "20px";
-        popupContainer.appendChild(buttonContainer);
-
-        // Create OK button
-        const okButton = document.createElement("button");
-        okButton.textContent = "OK";
-        okButton.style.padding = "10px 20px";
-        okButton.style.border = "none";
-        okButton.style.borderRadius = "4px";
-        okButton.style.backgroundColor = "#007bff";
-        okButton.style.color = "white";
-        okButton.style.cursor = "pointer";
-        okButton.style.fontWeight = "bold";
-        okButton.style.marginRight = "10px";
-        okButton.style.transition = "background-color 0.3s";
-        okButton.onmouseover = function () {
-            okButton.style.backgroundColor = "#0056b3";
-        };
-        okButton.onmouseout = function () {
-            okButton.style.backgroundColor = "#007bff";
-        };
-        buttonContainer.appendChild(okButton);
-
-        // Create Cancel button
-        const cancelButton = document.createElement("button");
-        cancelButton.textContent = "Cancel";
-        cancelButton.style.padding = "10px 20px";
-        cancelButton.style.border = "none";
-        cancelButton.style.borderRadius = "4px";
-        cancelButton.style.backgroundColor = "#6c757d";
-        cancelButton.style.color = "white";
-        cancelButton.style.cursor = "pointer";
-        cancelButton.style.fontWeight = "bold";
-        cancelButton.style.transition = "background-color 0.3s";
-        cancelButton.onmouseover = function () {
-            cancelButton.style.backgroundColor = "#5a6268";
-        };
-        cancelButton.onmouseout = function () {
-            cancelButton.style.backgroundColor = "#6c757d";
-        };
-        buttonContainer.appendChild(cancelButton);
-
-        // Append the popup to the body
-        document.body.appendChild(popupContainer);
-
-        // Add event listener for the OK button
-        okButton.addEventListener("click", function () {
-            const selectedStatus = trackerSelect.value;
-            const memoText = memoTextArea.value;
-            const DO_PARTIAL_RETURNED = "2";
-            // Call function to set the tracker status with updated values
-            if (selectedStatus === DO_PARTIAL_RETURNED && !memoText) {
-                showAlert(
-                    "Action Required: Memo Missing",
-                    "To proceed, please provide a memo when setting the status to 'DO: Partially Returned'. This memo helps to track partial returns and maintain accurate records."
-                );
-                return; // Exit the function if memo is required
-            }
-            if (selectedStatus) {
-                // console.log("Selected Tracker Value:", selectedStatus);
-                // console.log("Memo:", memoText);
-                setTrackerStatus(recordType, recordId, selectedStatus, memoText);
-                // Remove the popup from the DOM
-                document.body.removeChild(popupContainer);
-            } else {
-                alert("Please select a tracker status.");
-            }
-        });
-
-        // Add event listener for the Cancel button
-        cancelButton.addEventListener("click", function () {
-            // Remove the popup from the DOM
-            document.body.removeChild(popupContainer);
-        });
-    }
-  
     /*********************************
-     * UI COMPONENTS
+     * RECORD OPERATION
      *********************************/
-    /**
-     * Displays a modal alert box with a title and message.
-     *
-     * @param {string} title - The title of the alert box.
-     * @param {string} message - The message content of the alert box.
-     */
-    function showAlert(title, message) {
-        // Create the container for the alert box
-        const alertContainer = document.createElement("div");
-        alertContainer.style.position = "fixed";
-        alertContainer.style.top = "0";
-        alertContainer.style.left = "0";
-        alertContainer.style.width = "100%";
-        alertContainer.style.height = "100%";
-        alertContainer.style.backgroundColor = "rgba(0, 0, 0, 0.6)";
-        alertContainer.style.display = "flex";
-        alertContainer.style.justifyContent = "center";
-        alertContainer.style.alignItems = "center";
-        alertContainer.style.zIndex = "1000";
-        // Create the content box for the alert
-        const alertBox = document.createElement("div");
-        alertBox.style.backgroundColor = "#fff";
-        alertBox.style.padding = "20px";
-        alertBox.style.borderRadius = "10px";
-        alertBox.style.border = "2px solid #007bff"; // Border added
-        alertBox.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.3)"; // Enhanced shadow
-        alertBox.style.textAlign = "center";
-        alertBox.style.width = "350px";
-        alertBox.style.maxWidth = "90%";
-        // Title of the alert
-        const alertTitle = document.createElement("h2");
-        alertTitle.innerText = title;
-        alertTitle.style.marginBottom = "10px";
-        alertTitle.style.color = "#333";
-        alertTitle.style.fontSize = "20px";
-        alertTitle.style.borderBottom = "1px solid #ddd"; // Border line under title
-        alertTitle.style.paddingBottom = "10px";
-        // Message content of the alert
-        const alertMessage = document.createElement("p");
-        alertMessage.innerText = message;
-        alertMessage.style.marginBottom = "20px";
-        alertMessage.style.fontSize = "14px";
-        alertMessage.style.color = "#555";
-        // OK button
-        const okButton = document.createElement("button");
-        okButton.innerText = "OK";
-        okButton.style.padding = "12px 25px";
-        okButton.style.border = "none";
-        okButton.style.backgroundColor = "#007bff";
-        okButton.style.color = "#fff";
-        okButton.style.borderRadius = "5px";
-        okButton.style.cursor = "pointer";
-        okButton.style.transition = "background-color 0.3s ease";
-        okButton.style.fontSize = "14px";
-        // Button hover effect
-        okButton.addEventListener("mouseover", function () {
-            okButton.style.backgroundColor = "#0056b3";
+
+    // In Edit and Create mode: we store the value to the form. When user click Submit (UE), it will be saved
+    // _btnUpdate --> updateWebixToNetSuiteForm
+    function updateWebixToNetSuiteForm() {
+
+        const webix_values = webix.$$(WEBIX.TRACKER_FORM_ID).getValues();
+        var current_user = runtime.getCurrentUser();
+
+        THIS_RECORD.setValue({
+            fieldId: UI.TRACKER_STATUS_ID,
+            value: webix_values.status
         });
-        okButton.addEventListener("mouseout", function () {
-            okButton.style.backgroundColor = "#007bff";
+
+        THIS_RECORD.setValue({
+            fieldId: UI.TRACKER_MEMO_ID,
+            value: webix_values.memo
         });
-        // Append elements to alert box
-        alertBox.appendChild(alertTitle);
-        alertBox.appendChild(alertMessage);
-        alertBox.appendChild(okButton);
-        alertContainer.appendChild(alertBox);
-        document.body.appendChild(alertContainer);
-        // Event listener for closing the alert box
-        okButton.addEventListener("click", function () {
-            document.body.removeChild(alertContainer);
+
+        THIS_RECORD.setValue({
+            fieldId: UI.TRACKER_STATUS_NAME_ID,
+            value: STATUS_OPTIONS.find(e => e.id == webix_values.status).value
         });
+
+        THIS_RECORD.setValue({
+            fieldId: UI.TRACKER_UPDATED_BY_ID,
+            value: current_user.name
+        })
+    }
+
+    // In View Mode: we update the data directly to the record using script then refresh the page
+    // _btnUpdate --> updateWebixToNetSuiteRecord
+    function updateWebixToNetSuiteRecord() {
+        try {
+            const webix_values = webix.$$(WEBIX.TRACKER_FORM_ID).getValues();
+           
+            // Load the existing transaction tracker record
+            let tracker_record = record.load({
+                type: TRACKER_RECORD_TYPE,
+                id: webix_values.id
+            });
+
+            // If tracker record not found, create it
+            if (!tracker_record) {
+                tracker_record = record.create({
+                    type: TRACKER_RECORD_TYPE
+                });
+            }
+
+            // Set the values
+
+            tracker_record.setValue({
+                fieldId: TRACKER_RECORD_FIELDS.LINKED_TRANSACTION,
+                value: THIS_RECORD.id,
+            });
+
+            tracker_record.setValue({
+                fieldId: TRACKER_RECORD_FIELDS.RECORD_TYPE,
+                value: THIS_RECORD.type,
+            });
+
+            tracker_record.setValue({
+                fieldId: TRACKER_RECORD_FIELDS.STATUS,
+                value: webix_values.status,
+            });
+
+            tracker_record.setValue({
+                fieldId: TRACKER_RECORD_FIELDS.MEMO,
+                value: webix_values.memo
+            });
+
+            // Save the updated record
+            tracker_record.save();
+
+            // Inform the user of the successful saving
+            msg.create({
+                title: "Transaction Tracker Updated",
+                message: "You had updated this transaction tracker. This page will be refreshed in 5 seconds.",
+                type: msg.Type.CONFIRMATION
+            }).show({
+                duration: 5000 // 3 seconds
+            });         
+            
+            // Reload The Page to force update on form UI
+            setTimeout(function() {
+                window.location.reload();
+            }, 5000);
+
+        } catch (error) {
+
+            // Permission issue, log error
+            log.error({ title: "updateWebixToNetSuiteRecord", details: error.message });
+
+            // inform the user
+            msg.create({
+                title: "Transaction Tracker Update Failure",
+                message: "You don't have permission to update Transaction Tracker.",
+                type: msg.Type.ERROR
+            }).show({
+                duration: 5000 // 5 seconds
+            });
+        }
     }
 
     // expose the function to UE created elements
     return {
-        updateTrackerStatus,
-        setTrackerStatus,
+        showTrackerPopup
     };
 
   });
