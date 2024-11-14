@@ -52,20 +52,22 @@ function (currentRecord, record, query, log, msg, runtime) {
     };
     const WEBIX = {
         TRACKER_FORM_ID : 'wb_tracker_form'
-    }
+    };
+    const URL_PARAM = {
+        UPDATED: 'tt_updated'
+    };
 
     let STATUS_OPTIONS = [];
 
     /*********************************
-     * Start Up
+     * START UP
      *********************************/
 
-    // load the current record
-   
+    // Load the current record   
     const THIS_RECORD = currentRecord.get();
 
-    // query tracker record and update form, only if this is an existing transaction
-    // updateFormTracker();
+    // Show message of updated if previously updated in View mode
+    showUpdatedMessageOnStartup();
 
     // Inject Webix if Not Already Loaded by Other Scripts
     if (typeof webix === 'undefined') {
@@ -82,7 +84,7 @@ function (currentRecord, record, query, log, msg, runtime) {
 
 
     /*********************************
-     * Injectors
+     * LIBRARY INJECTORS
      *********************************/
 
     function injectCSS(css_array) {
@@ -111,6 +113,7 @@ function (currentRecord, record, query, log, msg, runtime) {
      *********************************/
 
     // Pop up Webix Form
+    // User clicked "Update Tracker Status" button created by User Event script
     function showTrackerPopup() {
 
         // Depending on Form mode, get the related tracker info
@@ -184,6 +187,28 @@ function (currentRecord, record, query, log, msg, runtime) {
         }
 
     }
+
+    // Check if we need to show up notification message that tracker had been updated
+    // Startup --> showUpdatedMessageOnStartup()
+    function showUpdatedMessageOnStartup() {
+        const url_params = new URLSearchParams(window.location.search);
+        if (url_params.has(URL_PARAM.UPDATED)) {
+            // Inform the user of the successful saving
+            msg.create({
+                title: "Transaction Tracker Updated",
+                message: "You had updated this transaction tracker.",
+                type: msg.Type.CONFIRMATION
+            }).show({
+                duration: 5000 // 5 seconds
+            });
+
+            // Delete the param, we just want to show once
+            const url = new URL(window.location.href);
+            url.searchParams.delete(URL_PARAM.UPDATED);
+            window.history.pushState({}, '', url.toString());
+        }
+    }
+
 
     /*********************************
      * DATA RETRIEVAL
@@ -330,19 +355,10 @@ function (currentRecord, record, query, log, msg, runtime) {
             // Save the updated record
             tracker_record.save();
 
-            // Inform the user of the successful saving
-            msg.create({
-                title: "Transaction Tracker Updated",
-                message: "You had updated this transaction tracker. This page will be refreshed in 5 seconds.",
-                type: msg.Type.CONFIRMATION
-            }).show({
-                duration: 5000 // 3 seconds
-            });         
-            
-            // Reload The Page to force update on form UI
-            setTimeout(function() {
-                window.location.reload();
-            }, 5000);
+            // Reload the page with a updated param, so that notification shows up to inform tracker updated
+            const url = new URL(window.location.href);
+            url.searchParams.set(URL_PARAM.UPDATED, 'T');
+            window.location.href = url.toString();
 
         } catch (error) {
 
