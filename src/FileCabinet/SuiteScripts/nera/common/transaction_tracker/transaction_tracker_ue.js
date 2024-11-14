@@ -133,7 +133,7 @@ define(["N/log", "N/query", "N/record", 'N/ui/message', 'N/ui/serverWidget'], fu
         const memo_field = form.addField({
             id: UI.TRACKER_MEMO_ID,
             label: UI.TRACKER_MEMO_LABEL,
-            type: serverWidget.FieldType.TEXT,     
+            type: serverWidget.FieldType.LONGTEXT,     
             container: UI.TRACKER_FIELD_GROUP_ID
         });
 
